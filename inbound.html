@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Inbound: 24-Hour Door Schedule</title>
+	<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+		background-color: #F7FCFF;
+    }
+
+    .schedule-wrapper {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: scroll;
+	  touch-action: pan-y;
+    }
+
+    .schedule {
+      display: block;
+      width: calc(24 * 280px + 100px);
+    }
+
+    .time-row {
+      display: flex;
+      position: sticky;
+      top: 50px;
+      background: white;
+      z-index: 10;
+	  background-color: rgba(255, 255, 255, 0.7); /* semi-transparent white */
+      backdrop-filter: blur(6px);                 /* apply blur */
+      -webkit-backdrop-filter: blur(6px); 
+	  border-bottom: 1px solid #CCC;	
+    }
+
+    .time-cell {
+      width: 280px;
+    height: 48px;
+    border-right: 1px dotted #eee;
+    text-align: left;
+    line-height: 48px;
+    font-weight: normal;
+    flex-shrink: 0;
+    padding-left: 5px;
+    box-sizing: border-box;
+    }
+
+    .door-rows {
+      display: flex;
+      flex-direction: column;
+	  margin-top: 48px;
+    }
+
+    .door-row {
+      display: flex;
+      height: 77px;
+      border-top: 1px solid #ccc;
+    }
+
+    
+
+    .schedule-grid {
+      display: flex;
+      flex-grow: 1;
+    }
+
+ 
+	 .hour-cell {
+  width: 279px;
+  height: 78px;
+  border-right: 1px dotted #ccc; /* Hour separator */
+  flex-shrink: 0;
+  display: flex;
+  background-color: #F7FCFF;		 
+}
+
+.quarter-cell {
+  width: 70px; /* 280px / 4 = 70px */
+  height: 100%;
+  box-sizing: border-box;
+  /* Optionally use background for visual separation */
+} 
+	  .schedule-grid .hour-cell:first-child {
+		  width: 178px;
+	  } 
+
+  /*  .current-time-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background-color: red;
+      z-index: 100;
+      pointer-events: none;
+    } */
+	  
+.current-time-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: red;
+  z-index: 100;
+  pointer-events: none;
+}
+	  	.loadcard-wrapper {
+    position: absolute;
+	z-index: 1;
+  }
+	   
+	   .loadcard {
+      width: 281px;
+      height: 78px;
+      background-color: #ffffff;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+      padding:  14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+		overflow-x: hidden;   
+    }
+	  .loadcard:hover {
+		  background-color: #F0F5FF;
+		  box-sizing: border-box;
+	  }
+    .loadcard-wrapper:hover {
+		  z-index: 5;
+	  }	
+    .cardhead {
+      font-weight: 500;
+      font-size: 14px;
+      color: #000;
+	  white-space: nowrap;
+  	  overflow: hidden;
+      text-overflow: ellipsis;
+    }
+	  .cardhead span {
+		  color: #D9D9D9;
+	  }
+	  
+    .progress-container {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .ticks {
+      display: flex;
+      gap: 2px;
+      margin-top: 4px;
+    }
+
+    .tick {
+      width: 15px;
+      height: 7px;
+      background-color: #D9D9D9;
+      border-radius: 2px;
+    }
+
+    .tick.on {
+      background-color: #09AA00;
+    }
+
+    .status-label {
+      font-size: 10px;
+      color: #5A5A5A;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+	  .cardhead {
+  position: relative;
+  cursor: default;
+}
+
+/* Tooltip styling */
+.cardhead::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 100%; /* Below the cardhead */
+  left: 0;
+  background: #333;
+  color: #fff;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(5px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 1000;
+}
+	  .loadcard-wrapper.done {
+		 opacity: 30%; 
+	  }
+	  .loadcard-wrapper.done:hover {
+		 opacity: 100%; 
+	  }
+/* Show on hover */
+.cardhead:hover::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+.loadcard-overlay {
+  min-width: 281px;
+  height: 78px;
+  padding: 14px;
+  border-radius: 6px;
+  background-color: #F0F5FF;
+  box-shadow: 0 0 4px rgba(0,0,0,0.1);
+  z-index: 10;
+  display: none;
+  pointer-events: none;
+  border: 1px solid #ccc;	
+}
+
+.loadcard-wrapper.hovering .loadcard {
+  visibility: visible;
+  height: 78px;	
+	 display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+} 
+.card-popup {
+  position: fixed;
+  top: 50px;
+  right: 50px;
+  width: 280px;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  padding: 20px;
+  z-index: 9999;
+  font-family: sans-serif;
+}
+
+.popup-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 18px;
+  color: #888;
+  cursor: pointer;
+}
+
+.popup-content .ticks {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.popup-content .tick {
+  width: 15px;
+  height: 7px;
+  background-color: #D9D9D9;
+  border-radius: 2px;
+}
+
+.popup-content .tick.on {
+  background-color: #09AA00;
+}
+
+.popup-content .status-label {
+  font-size: 10px;
+  color: #5A5A5A;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.popup-content .info-pairs div {
+  font-size: 14px;
+  margin: 5px 0;
+}
+
+.popup-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.popup-actions button {
+  padding: 6px 12px;
+  background-color: #eee;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.info-pairs strong {
+    display: inline-block;
+    width: 100px;
+    font-weight: lighter;
+    font-size: 14px;
+    color: grey;
+}	
+.info-pairs	  i {
+	font-weight: lighter;
+	color: #CCC;
+	  }
+	  
+.info-pairs .door span {
+    
+    font-weight: bold;
+    font-size: 24px;
+    color: black;
+}
+.loadcard-wrapper.selected {
+  z-index: 5;
+}
+
+.loadcard-wrapper.selected .loadcard, .loadcard-wrapper.selected.hovering .loadcard {
+  background-color: #F0FFF1;
+  box-sizing: border-box;
+  border-color: #AFEC8C;
+}	
+.loadcard-wrapper.done.selected {
+		 opacity: 100%; 
+	  }	
+.icon-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+	bottom: 0;
+    width: 57px;
+    background: #1F3864;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 10px;
+    border-right: 1px solid #ccc;
+    z-index: 1000;
+  }
+
+  .nav-panel {
+    position: fixed;
+    top: 0;
+    left: 57px;
+    width: 162px;
+    height: 100vh;
+    background-color: #E0EBF5;
+    padding: 20px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: transform 0.2s ease;
+    z-index: 999;
+	box-sizing: border-box; 
+	border-right: 1px solid #B4DAFF;  
+  }
+
+  .nav-panel.collapsed {
+    transform: translateX(-162px);
+  }
+
+ 
+ .nav-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  padding: 10px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid #B3D1EB;
+  background-color: #C3DBF0;
+  color: #00529B;
+  border-radius: 4px;
+  cursor: pointer;
+  }
+
+  .nav-button .material-icons-outlined {
+    font-size: 20px;
+  }
+
+  .badge {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: red;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 12px;
+  }
+
+  .right-nav {
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 155px;
+    height: 100vh;
+    background: white;
+    padding: 20px 10px;
+    border-left: 1px solid #ccc;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+	background-color: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);  
+  }
+
+  .right-nav-header {
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+
+  .right-nav button {
+    padding: 8px 6px;
+    font-size: 13px;
+    background: #F8FAFC;
+    border: 1px solid #B4DAFF;
+    border-radius: 4px;
+    cursor: pointer;
+	text-align: left;  
+  }
+
+  .door-label {
+    position: sticky;
+    z-index: 5;
+    background: #FBFEFF;
+    border-right: 1px solid #ccc;
+    text-align: center;
+    width: 100px;
+    min-width: 100px;
+    line-height: 78px;
+    left: 219px; /* default expanded position (57 + 162) */
+    transition: left 0.2s ease;
+  }
+	  .nav-panel .selected-btn {background-color: #1F3864; color: #fff;}
+/* Responsive header bar */
+  .header-bar {
+    position: fixed;
+    left: 219px;
+    right: 135px;
+    top: 0;
+    height: 50px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 0 20px;
+    z-index: 998;
+    border-bottom: 1px solid #ccc;
+    transition: left 0.2s ease;
+  }
+
+  .nav-panel.collapsed ~ .header-bar {
+    left: 57px !important;
+  }
+
+  .search {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    background: #f0f0f0;
+    border-radius: 20px;
+    padding: 0 10px;
+	margin-right: 40px;  
+  }
+
+  .search input {
+    border: none;
+    background: transparent;
+    padding: 8px;
+    outline: none;
+  }
+
+  .chips {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+  }
+
+  .chip {
+    display: flex;
+    align-items: center;
+    background: #e0f0ff;
+    padding: 5px 10px;
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .chip .material-icons {
+    font-size: 16px;
+    margin-left: 5px;
+  }
+
+  .dropdown-menu {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 30px;
+    left: 0;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+
+  .dropdown-menu label {
+    display: block;
+    font-size: 13px;
+    margin-bottom: 5px;
+  }
+
+  .dropdown select {
+    padding: 6px;
+    font-size: 12px;
+    border: 1px solid lightgrey;
+    border-radius: 4px;
+  }
+	  
+.right-nav button.task-button {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 6px 6px;
+    font-size: 13px;
+    background: #F8FAFC;
+    border: 1px solid #B4DAFF;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .task-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .task-main {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .task-title {
+    font-weight: bold;
+    font-size: 13px;
+  }
+
+  .task-sub {
+    font-size: 11px;
+    color: #555;
+  }
+
+  .task-info {
+    font-size: 12px;
+    color: #333;
+    text-align: right;
+    line-height: 1;
+  }
+	  .menu-toggle-button {
+    background-color: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .menu-toggle-button .material-icons-outlined {
+    font-size: 24px;
+    color: white;
+  }
+  
+@media (max-width: 1090px) {
+    
+    #left-nav-panel.active {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 57px;
+      width: 162px;
+      background: #F8FAFC;
+      z-index: 999;
+      height: 100vh;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    }
+    .door-label {
+      left: 57px !important;
+    }
+    .header-bar {
+      left: 57px !important;
+    }
+  }
+
+  #left-nav-panel.collapsed {
+    display: none;
+  }
+  </style>
+</head>
+<body>
+<!-- Icon Bar (stays fixed) -->
+<div class="icon-bar">
+  <button class="menu-toggle-button" onclick="toggleLeftNav()">
+  <span class="material-icons-outlined">menu</span>
+</button>
+</div>
+
+<!-- Left Navigation Panel -->
+<div id="left-nav-panel" class="nav-panel">
+  <button class="nav-button">
+    <span class="material-icons-outlined">where_to_vote</span>
+    Check In
+    <span class="badge">1</span>
+  </button>
+  <button class="nav-button selected-btn">
+    <span class="material-icons-outlined">share_location</span>
+    Monitor
+  </button>
+  <button class="nav-button">
+    <span class="material-icons-outlined">punch_clock</span>
+    End of Shift
+  </button>
+</div>
+
+<!-- Right Navigation Panel -->
+<div class="right-nav">
+  <div class="right-nav-header">Tasks</div>
+  <button class="task-button">
+    <div class="task-left">
+      <span class="material-icons-outlined">fit_screen</span>
+      <div class="task-main">
+        <div class="task-title">Assign Door</div>
+        <div class="task-sub">Henry S.</div>
+      </div>
+    </div>
+    <div class="task-info">2m</div>
+  </button>
+  
+</div>
+	
+<!-- Responsive Header Bar -->
+<div class="header-bar">
+  <div class="dropdown">
+    <select>
+      <option>Door Sets: All Doors</option>
+      <option>Dock 1–10</option>
+      <option>Dock 11–20</option>
+    </select>
+  </div>
+  <div class="chips">
+    <div class="chip" onclick="toggleFilterMenu()">Live <span class="material-icons">check</span></div>
+    <div class="chip" onclick="toggleFilterMenu()">Drop <span class="material-icons">check</span></div>
+    <div class="chip" onclick="toggleFilterMenu()">Open Doors <span class="material-icons">check</span></div>
+    <div class="dropdown-menu" id="filter-menu">
+      <label><input type="checkbox" checked> Live</label>
+      <label><input type="checkbox" checked> Drop</label>
+      <label><input type="checkbox"> Arriving</label>
+      <label><input type="checkbox" checked> Open Doors</label>
+    </div>
+  </div>
+  <div class="search">
+    <span class="material-icons">search</span>
+    <input type="text" placeholder="Search loads or doors...">
+  </div>
+  
+</div>
+
+  <div class="schedule-wrapper" id="wrapper">
+    
+    <div class="schedule">
+	<div class="current-time-line" id="current-time-line"></div>	
+      <!-- Time Header -->
+      <div class="time-row">
+        <!-- 24 Time Cells -->
+        <div class="time-cell">00:00</div><div class="time-cell">01:00</div><div class="time-cell">02:00</div>
+        <div class="time-cell">03:00</div><div class="time-cell">04:00</div><div class="time-cell">05:00</div>
+        <div class="time-cell">06:00</div><div class="time-cell">07:00</div><div class="time-cell">08:00</div>
+        <div class="time-cell">09:00</div><div class="time-cell">10:00</div><div class="time-cell">11:00</div>
+        <div class="time-cell">12:00</div><div class="time-cell">13:00</div><div class="time-cell">14:00</div>
+        <div class="time-cell">15:00</div><div class="time-cell">16:00</div><div class="time-cell">17:00</div>
+        <div class="time-cell">18:00</div><div class="time-cell">19:00</div><div class="time-cell">20:00</div>
+        <div class="time-cell">21:00</div><div class="time-cell">22:00</div><div class="time-cell">23:00</div>
+      </div>
+
+      <!-- 10 Door Rows -->
+      <div class="door-rows">
+        <!-- Repeat this block 10 times for 10 doors -->
+        <!-- Door 1 -->
+        <div class="door-row" data-door="1">
+          <div class="door-label">Door 1</div>
+          <div class="schedule-grid">
+            <!-- 24 Hour Cells -->
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+          </div>
+        </div>
+
+        <!-- Now just copy-paste and change Door number -->
+        <!-- Door 2 to Door 10 -->
+        <!-- You can copy the above .door-row block and change "Door 1" to "Door 2", etc. -->
+        <!-- Here's an example for Door 2: -->
+        <div class="door-row" data-door="2">
+          <div class="door-label">Door 2</div>
+          <div class="schedule-grid">
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+          </div>
+        </div>
+		  
+		 <div class="door-row" data-door="3">
+          <div class="door-label">Door 3</div>
+          <div class="schedule-grid">
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+          </div>
+        </div>  
+		   <div class="door-row" data-door="4">
+          <div class="door-label">Door 4</div>
+          <div class="schedule-grid">
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+          </div>
+        </div>
+		   <div class="door-row" data-door="5">
+          <div class="door-label">Door 5</div>
+          <div class="schedule-grid">
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+          </div>
+        </div>
+		   <div class="door-row" data-door="6">
+          <div class="door-label">Door 6</div>
+          <div class="schedule-grid">
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+          </div>
+        </div>
+		   <div class="door-row" data-door="7">
+          <div class="door-label">Door 7</div>
+          <div class="schedule-grid">
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+          </div>
+        </div>
+		   <div class="door-row" data-door="8">
+          <div class="door-label">Door 8</div>
+          <div class="schedule-grid">
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+          </div>
+        </div>
+		   <div class="door-row" data-door="9">
+          <div class="door-label">Door 9</div>
+          <div class="schedule-grid">
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+          </div>
+        </div>
+		   <div class="door-row" data-door="10">
+          <div class="door-label">Door 10</div>
+          <div class="schedule-grid">
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+          </div>
+        </div>
+		   <div class="door-row" data-door="11">
+          <div class="door-label">Door 11</div>
+          <div class="schedule-grid">
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+          </div>
+        </div>
+		   <div class="door-row" data-door="12">
+          <div class="door-label">Door 12</div>
+          <div class="schedule-grid">
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+          </div>
+        </div>
+		   <div class="door-row" data-door="13">
+          <div class="door-label">Door 13</div>
+          <div class="schedule-grid">
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+          </div>
+        </div>
+		   <div class="door-row" data-door="14">
+          <div class="door-label">Door 14</div>
+          <div class="schedule-grid">
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+          </div>
+        </div>
+		   <div class="door-row" data-door="15">
+          <div class="door-label">Door 15</div>
+          <div class="schedule-grid">
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+            <div class="hour-cell"></div><div class="hour-cell"></div><div class="hour-cell"></div>
+          </div>
+        </div>
+        <!-- Repeat until Door 10 -->
+        <!-- (You can continue copying/pasting as needed) -->
+      </div>
+<div class="loadcard-wrapper done" id="card-1" data-overlay-id="overlay-1">
+	<div class="loadcard">
+    <label class="cardhead" data-tooltip="Frito Lay | Atlas Freight | 1101-2151478278279">Frito Lay <span>|</span> Atlas Freight <span>|</span> 1101-2151478278279</label>
+    <div class="progress-container">
+      <div class="ticks">
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+		  <div class="tick on"></div>
+          <div class="tick"></div>
+      </div>
+      <div class="status-label">Gate Out</div>
+    </div>
+  </div>
+</div>
+<div class="loadcard-overlay" id="overlay-1"></div>
+		
+<div class="loadcard-wrapper" id="card-2" data-overlay-id="overlay-2">
+	<div class="loadcard">
+    <label class="cardhead" data-tooltip="Nestle <span>|</span> NorthStar <span>|</span> 8372-98372">Nestle <span>|</span> NorthStar <span>|</span> 8372-98372</label>
+    <div class="progress-container">
+      <div class="ticks">
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick "></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+		  <div class="tick"></div>
+          <div class="tick"></div>
+      </div>
+      <div class="status-label">GATE IN</div>
+    </div>
+  </div>	
+</div>
+<div class="loadcard-overlay" id="overlay-2"></div>	
+		
+<div class="loadcard-wrapper" id="card-3" data-overlay-id="overlay-3">
+  <div class="loadcard">
+    <label class="cardhead" data-tooltip="LA Merced USA <span>|</span> XPO <span>|</span> 8372-118726">LA Merced USA <span>|</span> XPO <span>|</span> 8372-118726</label>
+    <div class="progress-container">
+      <div class="ticks">
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+		  <div class="tick"></div>
+          <div class="tick"></div>
+      </div>
+      <div class="status-label">Door Confirmed by Driver</div>
+    </div>
+  </div>		
+</div>
+<div class="loadcard-overlay" id="overlay-3"></div>		
+		
+<div class="loadcard-wrapper" id="card-4" data-overlay-id="overlay-4">
+  <div class="loadcard">
+    <label class="cardhead" data-tooltip="LA Merced USA <span>|</span> XPO <span>|</span> 8372-118726">LA Merced USA <span>|</span> XPO <span>|</span> 8372-118726</label>
+    <div class="progress-container">
+      <div class="ticks">
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+		  <div class="tick"></div>
+          <div class="tick"></div>
+      </div>
+      <div class="status-label">Paperwork received</div>
+    </div>
+  </div>		
+</div>	
+<div class="loadcard-overlay" id="overlay-4"></div>		
+		
+<div class="loadcard-wrapper" id="card-5" data-overlay-id="overlay-5">
+  <div class="loadcard">
+    <label class="cardhead" data-tooltip="LA Merced USA <span>|</span> XPO <span>|</span> 8372-118726">LA Merced USA <span>|</span> XPO <span>|</span> 8372-118726</label>
+    <div class="progress-container">
+      <div class="ticks">
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+		  <div class="tick"></div>
+          <div class="tick"></div>
+      </div>
+      <div class="status-label">Payment Link Sent</div>
+    </div>
+  </div>		
+</div>	
+<div class="loadcard-overlay" id="overlay-5"></div>	
+		
+<div class="loadcard-wrapper" id="card-6" data-overlay-id="overlay-6">
+  <div class="loadcard">
+    <label class="cardhead" data-tooltip="LA Merced USA <span>|</span> XPO <span>|</span> 8372-118726">LA Merced USA <span>|</span> XPO <span>|</span> 8372-118726</label>
+    <div class="progress-container">
+      <div class="ticks">
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+		  <div class="tick"></div>
+          <div class="tick"></div>
+      </div>
+      <div class="status-label">Payment Complete</div>
+    </div>
+  </div>		
+</div>	
+<div class="loadcard-overlay" id="overlay-6"></div>
+
+<div class="loadcard-wrapper" id="card-7" data-overlay-id="overlay-7">
+  <div class="loadcard">
+    <label class="cardhead" data-tooltip="LA Merced USA <span>|</span> XPO <span>|</span> 8372-118726">LA Merced USA <span>|</span> XPO <span>|</span> 8372-118726</label>
+    <div class="progress-container">
+      <div class="ticks">
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick on"></div>
+        <div class="tick "></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+        <div class="tick"></div>
+		  <div class="tick"></div>
+		  <div class="tick"></div>
+      </div>
+      <div class="status-label">Unload Start</div>
+    </div>
+  </div>		
+</div>	
+<div class="loadcard-overlay" id="overlay-7"></div>			
+		<!--end cards-->
+    </div>
+  </div>
+
+<div id="card-popup" class="card-popup" style="display: none;">
+  <div class="popup-close" onclick="closeCardPopup()">×</div>
+  <div class="popup-content">
+    <div class="ticks">
+      <div class="tick on"></div><div class="tick on"></div><div class="tick on"></div>
+      <div class="tick on"></div><div class="tick"></div><div class="tick"></div>
+      <div class="tick"></div><div class="tick"></div><div class="tick"></div>
+    </div>
+    <div class="status-label">Paperwork Received</div>
+
+    <div class="info-pairs">
+      <div class="door"><strong>Door:</strong><span>3</span></div>
+      <div><strong>Vendor:</strong> LA Merced USA</div>
+      <div><strong>Carrier:</strong> XPO</div>
+
+      <br>
+
+      <div><strong>PO #:</strong> 8372</div>
+	  <div><strong>APP #:</strong> 928-72722</div>	
+      <div><strong>BOL:</strong> 118726</div>
+      <div><strong>Load Type:</strong> Drop</div>
+
+      <br>
+
+      <div><strong>Driver:</strong> Edwin Bundle</div>
+      <div><strong>Driver Phone:</strong> (555) 555-5555</div>
+      <div><strong>Trailer #:</strong> T-45632</div>
+
+      <br>
+
+      <div><strong>Unloaders:</strong> <i>UNASSIGNED</i></div>
+    </div>
+
+    <div class="popup-actions">
+      <button onclick="alert('Change Door')">Change Door</button>
+      <button onclick="alert('Move to Yard')">Move to Yard</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const pixelsPerHour = 280;
+const pixelsPerMinute = pixelsPerHour / 60;
+
+const now = new Date();
+const minutes = now.getHours() * 60 + now.getMinutes();
+const offset = minutes * pixelsPerMinute;
+
+const redLine = document.getElementById('current-time-line');
+redLine.style.left = offset + 'px';
+
+function updateRedLineHeight() {
+  const doorRows = document.querySelector('.door-rows');
+
+  const visibleRows = Array.from(doorRows.querySelectorAll('.door-row'))
+    .filter(row => row.style.display !== 'none');
+
+  const rowHeight = 78;
+  const headerHeight = 100;
+  const extraBuffer = 48;
+
+  const visibleContentHeight = visibleRows.length * rowHeight + headerHeight + extraBuffer;
+
+  redLine.style.height = `${visibleContentHeight}px`;
+}
+
+// Initial call
+updateRedLineHeight();
+
+// Respond to Open Doors checkbox toggle
+const openDoorsCheckbox = document.querySelector('#filter-menu input[value="open-doors"]');
+if (openDoorsCheckbox) {
+  openDoorsCheckbox.addEventListener('change', () => {
+    setTimeout(updateRedLineHeight, 50); // allow DOM updates
+  });
+}
+
+ function toggleLeftNav() {
+    const navPanel = document.getElementById('left-nav-panel');
+    if (window.innerWidth <= 1090) {
+      navPanel.classList.toggle('active');
+    } else {
+      navPanel.classList.toggle('collapsed');
+    }
+  }
+
+  // Collapse nav after selection in portrait/tablet mode
+  document.querySelectorAll('#left-nav-panel button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (window.innerWidth <= 1090) {
+        document.getElementById('left-nav-panel').classList.remove('active');
+      }
+    });
+  });
+	  
+  const wrapper = document.getElementById('wrapper');
+  wrapper.scrollLeft = offset - (window.innerWidth / 2);
+</script>
+<script>
+  const pxPerHour = 280;
+  const pxPerMinute = pxPerHour / 60;
+  const rowHeight = 78; // Your current door row height
+  const headerHeight = 99; // 78Time row height + 48header height
+
+  function parseTimeString(timeStr) {
+    const [h, m] = timeStr.split(":").map(Number);
+    return h * 60 + m;
+  }
+
+  function positionLoadCard(wrapperEl, startTime, doorIndex, duration = null) {
+    const minutes = parseTimeString(startTime);
+    const left = minutes * pxPerMinute;
+    const top = headerHeight + (doorIndex * rowHeight);
+
+    wrapperEl.style.left = `${left}px`;
+    wrapperEl.style.top = `${top}px`;
+
+    if (duration !== null) {
+      const width = duration * pxPerMinute;
+      const card = wrapperEl.querySelector(".loadcard");
+      if (card) {
+        card.style.width = `${width}px`;
+      }
+    }
+  }
+
+  // Example usage:
+  window.addEventListener("DOMContentLoaded", () => {
+    const card1 = document.getElementById("card-1");
+    positionLoadCard(card1, "12:15", 0, 60); // 90-min card on Door 1 at 11:15 AM
+
+    const card2 = document.getElementById("card-2");
+    positionLoadCard(card2, "14:45", 1, 30); // 30-min card on Door 2 at 1:45 PM
+	  
+	 const card3 = document.getElementById("card-3");
+    positionLoadCard(card3, "13:00", 0, 60); // 90-min card on Door 1 at 11:15 AM  
+	  
+	   const card4 = document.getElementById("card-4");
+    positionLoadCard(card4, "15:00", 5, 45); // 90-min card on Door 1 at 11:15 AM 
+	  
+	   const card5 = document.getElementById("card-5");
+    positionLoadCard(card5, "15:30", 7, 60); // 90-min card on Door 1 at 11:15 AM 
+	  
+	  const card6 = document.getElementById("card-6");
+    positionLoadCard(card6, "14:00", 10, 45); // 90-min card on Door 1 at 11:15 AM 
+	  
+	  const card7 = document.getElementById("card-7");
+    positionLoadCard(card7, "13:45", 14, 60); // 90-min card on Door 1 at 11:15 AM 
+  });
+</script>
+<script>
+  history.pushState(null, null, location.href);
+  window.addEventListener('popstate', function () {
+    history.pushState(null, null, location.href);
+  });
+</script>	
+<script>
+  document.querySelectorAll('.loadcard-wrapper').forEach(wrapper => {
+    const card = wrapper.querySelector('.loadcard');
+    const overlayId = wrapper.dataset.overlayId;
+    const overlay = document.getElementById(overlayId);
+
+    if (!overlay) {
+      console.warn(`No overlay found for ${overlayId}`);
+      return;
+    }
+
+    wrapper.addEventListener('mouseenter', () => {
+      const wrapperRect = wrapper.getBoundingClientRect();
+
+      // Copy content
+      overlay.innerHTML = card.innerHTML;
+
+      // Match position
+      overlay.style.position = 'absolute';
+      overlay.style.left = `${wrapper.offsetLeft}px`;
+      overlay.style.top = `${wrapper.offsetTop}px`;
+      overlay.style.display = 'flex';
+      overlay.style.flexDirection = 'column';
+      overlay.style.justifyContent = 'space-between';
+
+      // Copy select computed styles
+      const computedStyles = window.getComputedStyle(card);
+      overlay.style.padding = computedStyles.padding;
+      overlay.style.borderRadius = computedStyles.borderRadius;
+      overlay.style.boxSizing = computedStyles.boxSizing;
+      overlay.style.font = computedStyles.font;
+      overlay.style.lineHeight = computedStyles.lineHeight;
+		
+		 // Highlight for selected hover
+    if (wrapper.classList.contains('selected')) {
+      overlay.style.backgroundColor = '#F0FFF1'; // Hovered selected
+    } else {
+      overlay.style.backgroundColor = '#F0F5FF'; // Normal hover
+    }
+
+      wrapper.classList.add('hovering');
+    });
+
+    wrapper.addEventListener('mouseleave', () => {
+      overlay.style.display = 'none';
+      overlay.innerHTML = '';
+      wrapper.classList.remove('hovering');
+    });
+  });
+</script>
+<script>
+  function openCardPopup(data = {}) {
+    const popup = document.getElementById('card-popup');
+    popup.style.display = 'block';
+
+    // Optionally populate content dynamically
+    // document.querySelector('.info-pairs').innerHTML = ...
+  }
+
+  function closeCardPopup() {
+    document.getElementById('card-popup').style.display = 'none';
+	   // Optional: unselect current card
+  	document.querySelectorAll('.loadcard-wrapper.selected').forEach(el => {
+    el.classList.remove('selected');
+  	});
+  }
+
+  // Optional: add event listeners to cards
+ document.querySelectorAll('.loadcard-wrapper').forEach(wrapper => {
+  wrapper.addEventListener('click', (e) => {
+    e.stopPropagation();
+
+    // Remove selected class from all cards
+    document.querySelectorAll('.loadcard-wrapper.selected').forEach(el => {
+      el.classList.remove('selected');
+    });
+
+    // Mark this one as selected
+    wrapper.classList.add('selected');
+
+    openCardPopup(); // Optional: pass in data
+  });
+});
+
+</script>
+<script>
+  function toggleLeftNav() {
+    const panel = document.getElementById('left-nav-panel');
+    panel.classList.toggle('collapsed');
+
+    const doorLabels = document.querySelectorAll('.door-label');
+    const headerBar = document.getElementById('header-bar');
+    const offset = panel.classList.contains('collapsed') ? 57 : 219;
+
+    doorLabels.forEach(label => {
+      label.style.left = offset + 'px';
+    });
+
+    headerBar.style.left = offset + 'px';
+  }
+</script>	
+<!-- JS for filter dropdown -->
+<script>
+  function toggleFilterMenu() {
+    const menu = document.getElementById('filter-menu');
+    menu.style.display = (menu.style.display === 'flex') ? 'none' : 'flex';
+  }
+</script>
+<!-- JS for filter all doors filter toggle -->	
+<script>
+  function updateOpenDoorsFilter() {
+    const openDoorsChecked = document.querySelector('#filter-menu input[type="checkbox"][value="open-doors"]').checked;
+    const allDoorRows = document.querySelectorAll('.door-rows .door-row');
+    const loadCards = document.querySelectorAll('.loadcard-wrapper');
+
+    const rowHeight = 78;
+    const headerHeight = 99;
+
+    const doorIndexToCards = new Map();
+    loadCards.forEach(card => {
+      const top = parseInt(card.dataset.originalTop || card.style.top, 10);
+      card.dataset.originalTop = top; // store original if not already set
+      const doorIndex = Math.round((top - headerHeight) / rowHeight);
+      if (!doorIndexToCards.has(doorIndex)) {
+        doorIndexToCards.set(doorIndex, []);
+      }
+      doorIndexToCards.get(doorIndex).push(card);
+    });
+
+    let visibleIndex = 0;
+    allDoorRows.forEach((row, index) => {
+      const hasCard = doorIndexToCards.has(index);
+      if (!openDoorsChecked && !hasCard) {
+        row.style.display = 'none';
+      } else {
+        row.style.display = '';
+        if (doorIndexToCards.has(index)) {
+          doorIndexToCards.get(index).forEach(card => {
+            card.style.top = `${headerHeight + visibleIndex * rowHeight}px`;
+            card.style.display = '';
+          });
+        }
+        visibleIndex++;
+      }
+    });
+
+    if (openDoorsChecked) {
+      // restore original top values
+      loadCards.forEach(card => {
+        card.style.display = '';
+        if (card.dataset.originalTop) {
+          card.style.top = `${card.dataset.originalTop}px`;
+        }
+      });
+    }
+
+    const openDoorsChip = Array.from(document.querySelectorAll('.chip')).find(chip => chip.textContent.includes('Open Doors'));
+    if (openDoorsChip) {
+      openDoorsChip.style.display = openDoorsChecked ? 'inline-flex' : 'none';
+    }
+
+    if (doorRowsContainer && redLine) {
+      redLine.style.height = doorRowsContainer.getBoundingClientRect().height + 'px';
+    }
+  }
+
+  document.querySelectorAll('#filter-menu input[type="checkbox"]').forEach(checkbox => {
+    if (checkbox.nextSibling.textContent.trim().toLowerCase() === 'open doors') {
+      checkbox.setAttribute('value', 'open-doors');
+      checkbox.addEventListener('change', updateOpenDoorsFilter);
+    }
+  });
+</script>	
+
+</body>
+</html>
