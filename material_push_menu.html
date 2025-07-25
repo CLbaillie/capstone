@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Material Drawer Example</title>
+  <link rel="stylesheet" href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <style>
+    .mdc-top-app-bar--fixed-adjust {
+      padding: 16px;
+    }
+  </style>
+</head>
+<body class="mdc-typography">
+  <aside class="mdc-drawer mdc-drawer--dismissible" id="drawer">
+    <div class="mdc-drawer__content">
+      <nav class="mdc-list">
+        <a class="mdc-list-item mdc-list-item--activated" href="#checkin" aria-current="page">
+          <i class="material-icons mdc-list-item__graphic" aria-hidden="true">where_to_vote</i>
+          <span class="mdc-list-item__text">Check In</span>
+        </a>
+        <a class="mdc-list-item" href="#monitor">
+          <i class="material-icons mdc-list-item__graphic" aria-hidden="true">share_location</i>
+          <span class="mdc-list-item__text">Monitor</span>
+        </a>
+        <a class="mdc-list-item" href="#end">
+          <i class="material-icons mdc-list-item__graphic" aria-hidden="true">punch_clock</i>
+          <span class="mdc-list-item__text">End of Shift</span>
+        </a>
+      </nav>
+    </div>
+  </aside>
+  <div class="mdc-drawer-app-content">
+    <header class="mdc-top-app-bar" id="app-bar">
+      <div class="mdc-top-app-bar__row">
+        <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-start">
+          <button class="material-icons mdc-top-app-bar__navigation-icon" id="menu-button">menu</button>
+          <span class="mdc-top-app-bar__title">Demo</span>
+        </section>
+      </div>
+    </header>
+
+    <main class="main-content" id="main-content">
+      <div class="mdc-top-app-bar--fixed-adjust">
+        <h1>Welcome</h1>
+        <p>Content goes here.</p>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+  <script>
+    const drawer = mdc.drawer.MDCDrawer.attachTo(document.querySelector('#drawer'));
+    const topAppBar = mdc.topAppBar.MDCTopAppBar.attachTo(document.querySelector('#app-bar'));
+    topAppBar.setScrollTarget(document.getElementById('main-content'));
+    topAppBar.listen('MDCTopAppBar:nav', () => {
+      drawer.open = !drawer.open;
+    });
+  </script>
+</body>
+</html>
