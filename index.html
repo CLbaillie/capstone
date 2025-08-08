@@ -18,6 +18,11 @@
       background: #f4f4f4;
     }
 
+
+    .card-img-top {
+      height: 200px;
+      object-fit: cover;
+
     .container {
       max-width: 600px;
       margin: auto;
@@ -49,16 +54,61 @@
 
     a:hover {
       color: #007bff;
+
     }
   </style>
 </head>
 <body>
   <div class="container">
+
+    <h1 class="text-center mb-4">HTML Samples</h1>
+    <div class="row">
+      <div class="col-md-4">
+        <div class="card mb-4">
+          <img
+            src="https://images.unsplash.com/photo-1529070538774-1843cb3265df?auto=format&fit=crop&w=400&h=200&q=60"
+            class="card-img-top"
+            alt="Warehouse" />
+          <div class="card-body text-center">
+            <h5 class="card-title">Inbound: 24-Hour Door Schedule</h5>
+            <a href="inbound.html" class="btn btn-primary">View Demo</a>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card mb-4">
+          <img
+            src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=400&h=200&q=60"
+            class="card-img-top"
+            alt="Laptop" />
+          <div class="card-body text-center">
+            <h5 class="card-title">Progressive Image Upload Demo</h5>
+            <a href="upload_progress_and_dark_mode.html" class="btn btn-primary"
+              >View Demo</a
+            >
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card mb-4">
+          <img
+            src="https://images.unsplash.com/photo-1559027615-7bccebc5f1ff?auto=format&fit=crop&w=400&h=200&q=60"
+            class="card-img-top"
+            alt="Mobile menu" />
+          <div class="card-body text-center">
+            <h5 class="card-title">Material Push Menu</h5>
+            <a href="material_push_menu.html" class="btn btn-primary">View Demo</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <h1>HTML Samples</h1>
     <ul>
       <li><a href="inbound.html">Inbound: 24-Hour Door Schedule</a></li>
       <li><a href="upload_progress_and_dark_mode.html">Progressive Image Upload Demo</a></li>
     </ul>
+
   </div>
   <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
 </body>
