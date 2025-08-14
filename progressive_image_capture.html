@@ -3,136 +3,122 @@
 <head>
   <meta charset="UTF-8" />
   <title>Progressive Image Capture</title>
-  <link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/materia/bootstrap.min.css"
-  />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/materia/bootstrap.min.css" />
   <style>
     body {
       margin: 40px;
       font-family: Arial, sans-serif;
     }
-
-
-    .tab-content > div {
-      display: none;
+    .upload-item {
+      position: relative;
+      margin-bottom: 1.5rem;
     }
-
-    .tab-content > div.active {
+    .upload-item img {
+      width: 100%;
+      height: auto;
       display: block;
-
-    #preview img {
-      max-width: 100%;
-      margin-top: 20px;
-
+    }
+    .progress-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 1.25rem;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h1 class="mb-4 text-center">Progressive Image Capture</h1>
-
-    <ul class="nav nav-tabs justify-content-center mb-3" id="captureTabs" role="tablist">
-      <li class="nav-item" role="presentation">
-        <button
-          class="nav-link active"
-          type="button"
-          data-tab="upNext"
-          role="tab"
-        >
-          Up Next
-        </button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button
-          class="nav-link"
-          type="button"
-          data-tab="inProgress"
-          role="tab"
-        >
-          In Progress
-        </button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button
-          class="nav-link"
-          type="button"
-          data-tab="completed"
-          role="tab"
-        >
-          Completed
-        </button>
-      </li>
-    </ul>
-    <div class="tab-content">
-      <div id="upNext" class="active">
-        <p class="text-center mt-3">No tasks pending.</p>
-      </div>
-      <div id="inProgress">
-        <p class="text-center mt-3">Nothing in progress.</p>
-      </div>
-      <div id="completed">
-        <p class="text-center mt-3">No completed items.</p>
-      </div>
+    <div class="text-center mb-3">
+      <button class="btn btn-primary" id="captureBtn">Take photo</button>
+      <input type="file" accept="image/*" capture="environment" id="fileInput" class="d-none" />
     </div>
+    <div id="queue"></div>
   </div>
 
   <script>
-    const tabs = document.querySelectorAll('#captureTabs .nav-link');
-    const panes = document.querySelectorAll('.tab-content > div');
+    const captureBtn = document.getElementById('captureBtn');
+    const fileInput = document.getElementById('fileInput');
+    const queueContainer = document.getElementById('queue');
 
-    tabs.forEach((tab) => {
-      tab.addEventListener('click', () => {
-        tabs.forEach((t) => t.classList.remove('active'));
-        panes.forEach((p) => p.classList.remove('active'));
-        tab.classList.add('active');
-        const pane = document.getElementById(tab.dataset.tab);
-        pane.classList.add('active');
-      });
+    const queue = [];
+    let uploading = false;
 
-    <input
-      type="file"
-      accept="image/*"
-      capture="environment"
-      class="form-control mb-3"
-      id="fileInput"
-    />
-    <div class="progress mb-3" id="progressContainer" style="display: none;">
-      <div class="progress-bar" role="progressbar" style="width: 0%;" id="progressBar"></div>
-    </div>
-    <div id="preview" class="text-center"></div>
-  </div>
+    captureBtn.addEventListener('click', () => fileInput.click());
 
-  <script>
-    const input = document.getElementById('fileInput');
-    const progressContainer = document.getElementById('progressContainer');
-    const progressBar = document.getElementById('progressBar');
-    const preview = document.getElementById('preview');
-
-    input.addEventListener('change', (e) => {
+    fileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
+      addToQueue(file);
+      e.target.value = '';
+    });
+
+    function addToQueue(file) {
+      const item = createUploadItem(file);
+      queueContainer.appendChild(item.element);
+      queue.push(item);
+      processQueue();
+    }
+
+    function createUploadItem(file) {
+      const element = document.createElement('div');
+      element.className = 'upload-item';
+
+      const img = document.createElement('img');
+      element.appendChild(img);
+
+      const overlay = document.createElement('div');
+      overlay.className = 'progress-overlay';
+      overlay.textContent = '0%';
+      element.appendChild(overlay);
+
+      const progress = document.createElement('div');
+      progress.className = 'progress mt-2';
+      const bar = document.createElement('div');
+      bar.className = 'progress-bar';
+      bar.style.width = '0%';
+      progress.appendChild(bar);
+      element.appendChild(progress);
+
       const reader = new FileReader();
-      progressContainer.style.display = 'block';
-      progressBar.style.width = '0%';
-      reader.onprogress = (ev) => {
-        if (ev.lengthComputable) {
-          const percent = (ev.loaded / ev.total) * 100;
-          progressBar.style.width = percent + '%';
-        }
-      };
       reader.onload = (ev) => {
-        progressBar.style.width = '100%';
-        const img = document.createElement('img');
         img.src = ev.target.result;
-        img.alt = 'Captured image';
-        preview.innerHTML = '';
-        preview.appendChild(img);
       };
       reader.readAsDataURL(file);
 
-    });
+      return { file, element, overlay, bar };
+    }
+
+    function processQueue() {
+      if (uploading || queue.length === 0) return;
+      uploading = true;
+      const current = queue.shift();
+      simulateUpload(current).then(() => {
+        uploading = false;
+        processQueue();
+      });
+    }
+
+    function simulateUpload(item) {
+      return new Promise((resolve) => {
+        let progress = 0;
+        const interval = setInterval(() => {
+          progress += Math.random() * 20;
+          if (progress >= 100) {
+            progress = 100;
+            clearInterval(interval);
+            setTimeout(resolve, 500);
+          }
+          item.overlay.textContent = Math.floor(progress) + '%';
+          item.bar.style.width = progress + '%';
+        }, 300);
+      });
+    }
   </script>
 </body>
 </html>
-
